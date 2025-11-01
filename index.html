@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00A6FF">
+    <meta name="msapplication-TileColor" content="#032B4A">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title data-translate="app_title">Jharkhand Civic Grievance Portal - Home</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome for icons (used in responsive menu in other pages) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Chart.js for beautiful charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Mobile-first approach for navigation (Keeping base styles here for clarity) */
+        .menu-toggle {
+            display: none;
+            cursor: pointer;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 21px;
+            margin-left: 10px; 
+        }
+
+        .menu-toggle .bar {
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center; 
+        }
+
+        /* Hero actions alignment */
+        .hero-actions {
+            display: flex;
+            gap: 15px; 
+            justify-content: center;
+            flex-wrap: wrap; 
+        }
+
+        .hero-actions .btn {
+            flex-grow: 1;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        /* Responsive Navigation Logic (Mobile compatibility ensures buttons stack) */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            nav {
+                justify-content: space-between;
+            }
+
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                background-color: var(--bg-dark);
+                position: absolute;
+                top: 60px; 
+                left: 0;
+                text-align: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding-bottom: 10px; 
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .nav-links a {
+                margin: 0;
+                padding: 15px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            #lang-select {
+                margin: 10px auto !important; 
+                width: 80%;
+            }
+
+            .hero-actions .hero-btn {
+                width: 100%; 
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading spinner (shows on toggle clicks) -->
+    <div id="temp-loader" class="loader-container loader-hidden">
+        <div class="loader"></div>
+        <div class="loading-text">Loading, please wait...</div>
+    </div>
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html" data-translate="logo_title">THE CITIZENS</a></div>
+            <div style="display: flex; align-items: center;">
+                <div class="menu-toggle" id="menu-toggle">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+                <div class="nav-links" id="nav-links">
+                    <a href="index.html" class="active" data-translate="nav_home">Home</a>
+                    <a href="report.html" data-translate="nav_report">Report Issue</a>
+                    <a href="track_status.html" data-translate="nav_track">Track Status</a>
+                    <a href="login.html" data-translate="nav_admin">Admin Login</a>
+                    <!-- Language selector added here -->
+                    <select id="lang-select" onchange="switchLanguage(this.value)" style="margin-left: 15px; padding: 5px; border-radius: 4px; font-size: 0.9em; color: var(--text-dark);">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1 data-translate="hero_h1">Making Jharkhand Vibrant, Together.</h1>
+            <p data-translate="hero_p" style="margin-bottom: 30px;">Your Voice, Our Action. Report civic issues across Jharkhand directly to the responsible departments.</p>
+            
+            <!-- NEW: Both buttons use the primary style for uniformity -->
+            <div class="hero-actions">
+                <a href="report.html" class="btn btn-primary hero-btn" data-translate="submit_btn">FILE A NEW COMPLAINT NOW</a>
+                <a href="track_status.html" class="btn btn-primary hero-btn" data-translate="nav_track">TRACK STATUS</a>
+            </div>
+        </section>
+
+        <!-- Dynamic Analytics Section -->
+        <section class="card analytics-section">
+            <h2 class="section-title" data-translate="analytics_title">Operational Analytics</h2>
+            
+            <div class="analytics-content">
+                <div class="response-time-display">
+                    <h3 data-translate="avg_response_h3">Average Response Time</h3>
+                    <p id="avg-response-time">3.5 Days</p>
+                    <span id="response-status">Excellent!</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="responseChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Complaint Category 3D-look Chart removed: consolidated analytics on the home page -->
+
+        <!-- Department Aggregation Pie Chart -->
+        <section class="card">
+            <h2 class="section-title">Complaints by Department</h2>
+            <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+                <div style="flex:1; min-width:320px; height:300px;">
+                    <canvas id="departmentPie" style="max-width:100%; height:100%;"></canvas>
+                </div>
+                <div style="min-width:220px;">
+                    <div id="deptLegend"></div>
+                    <div style="margin-top:12px; display:flex; gap:8px;">
+                        <button id="deptRefreshBtn" class="btn">Refresh</button>
+                        <button id="deptGenDemoBtn" class="btn btn-primary">Generate Demo Data</button>
+                        <button id="deptClearBtn" class="btn" style="background:#fff; border:1px solid #ddd;">Clear Data</button>
+                    </div>
+                    <p id="deptChartStatus" style="margin-top:10px; color:#666;"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- General Issue Overview (Retained) -->
+        <section class="card">
+            <h2 class="section-title" data-translate="issue_overview_h2">Current Issue Overview</h2>
+            <div class="summary-grid">
+                <div class="card stat-card total-complaints">
+                    <h2 data-translate="total_reports_h2">TOTAL REPORTS</h2>
+                    <p id="total-count">250</p>
+                </div>
+                <div class="card stat-card resolved-issues">
+                    <h2 data-translate="resolved_issues_h2">RESOLVED ISSUES</h2>
+                    <p id="resolved-count">120</p>
+                </div>
+                <div class="card stat-card high-priority">
+                    <h2 data-translate="high_priority_h2">HIGH PRIORITY</h2>
+                    <p id="high-count">55</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <!-- Footer restored with original text and updated contact -->
+        <p style="text-align: center; padding: 15px; color: #fff; background: var(--bg-dark); margin-top: 20px;">
+            &copy; 2025 Jharkhand Govt. Civic Dashboard | <span data-translate="footer_contact">Contact Us: +91 9166455282</span>
+        </p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // --- EMBEDDED TRANSLATION FIX: START ---
+        const translations = {
+            'hi': {
+                'app_title': 'झारखंड नागरिक शिकायत पोर्टल - होम',
+                'logo_title': 'नागरिक',
+                'nav_home': 'होम',
+                'nav_report': 'शिकायत दर्ज करें',
+                'nav_track': 'स्थिति ट्रैक करें',
+                'nav_admin': 'एडमिन लॉगिन',
+                'hero_h1': 'झारखंड को एक साथ जीवंत बनाना।',
+                'hero_p': 'आपकी आवाज़, हमारी कार्रवाई। संबंधित विभागों को सीधे नागरिक समस्याएँ रिपोर्ट करें।',
+                'submit_btn': 'नई शिकायत दर्ज करें',
+                'analytics_title': 'परिचालन विश्लेषण',
+                'avg_response_h3': 'औसत प्रतिक्रिया समय',
+                'complaints_category_h2': 'श्रेणी के अनुसार शिकायतें (इस माह)',
+                'issue_overview_h2': 'वर्तमान समस्या अवलोकन',
+                'total_reports_h2': 'कुल रिपोर्टें',
+                'resolved_issues_h2': 'हल किए गए मुद्दे',
+                'high_priority_h2': 'उच्च प्राथमिकता',
+                'footer_contact': 'संपर्क करें: +91 9166455282',
+                'status_excellent': 'उत्कृष्ट!',
+                'status_good': 'अच्छा।',
+                'status_improvement': 'सुधार की आवश्यकता है।',
+                'days': 'दिन'
+            },
+            'en': {
+                'app_title': 'Jharkhand Civic Grievance Portal - Home',
+                'logo_title': 'THE CITIZENS',
+                'nav_home': 'Home',
+                'nav_report': 'Report Issue',
+                'nav_track': 'Track Status',
+                'nav_admin': 'Admin Login',
+                'hero_h1': 'Making Jharkhand Vibrant, Together.',
+                'hero_p': 'Your Voice, Our Action. Report civic issues across Jharkhand directly to the responsible departments.',
+                'submit_btn': 'FILE A NEW COMPLAINT NOW',
+                'analytics_title': 'Operational Analytics',
+                'avg_response_h3': 'Average Response Time',
+                'complaints_category_h2': 'Complaints by Category (This Month)',
+                'issue_overview_h2': 'Current Issue Overview',
+                'total_reports_h2': 'TOTAL REPORTS',
+                'resolved_issues_h2': 'RESOLVED ISSUES',
+                'high_priority_h2': 'HIGH PRIORITY',
+                'footer_contact': 'Contact Us: +91 9166455282',
+                'status_excellent': 'Excellent!',
+                'status_good': 'Good.',
+                'status_improvement': 'Needs Improvement.',
+                'days': 'Days'
+            }
+        };
+
+        window.switchLanguage = function(lang) {
+            localStorage.setItem('language', lang);
+            updateContent(lang);
+        }
+
+        window.updateContent = function(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'TITLE') {
+                        document.title = translations[lang][key];
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+
+            const langSelector = document.getElementById('lang-select');
+            if (langSelector) {
+                langSelector.value = lang;
+            }
+
+            const responseStatusElement = document.getElementById('response-status');
+            if (responseStatusElement) {
+                const currentText = responseStatusElement.textContent.toLowerCase().trim();
+                
+                let statusKey = 'status_excellent';
+                if (currentText.includes('good') || currentText.includes('अच्छा')) {
+                    statusKey = 'status_good';
+                } else if (currentText.includes('improvement') || currentText.includes('सुधार')) {
+                    statusKey = 'status_improvement';
+                }
+                
+                responseStatusElement.textContent = translations[lang][statusKey];
+            }
+        }
+        // --- EMBEDDED TRANSLATION FIX: END ---
+
+
+        // MOCK DATA and FUNCTIONS for the Home Page
+        function updateSummaryStats() {
+            document.getElementById('total-count').textContent = '250';
+            document.getElementById('resolved-count').textContent = '120';
+            document.getElementById('high-count').textContent = '55';
+        }
+        
+        window.onload = function() {
+            // FIX: Ensure the translation engine runs immediately after scripts load
+            const savedLang = localStorage.getItem('language') || 'en';
+            
+            // This is the function that initializes the translation on load
+            updateContent(savedLang); 
+
+            updateSummaryStats();
+            // Chart.js Configuration
+            const ctxResponse = document.getElementById('responseChart').getContext('2d');
+
+            // Mock data for the response time chart
+            const mockResponseData = {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Average Response Time (Days)',
+                    data: [4.5, 5.1, 4.0, 3.8, 3.5, 3.2],
+                    backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                    fill: true,
+                    tension: 0.4
+                }]
+            };
+
+            const responseChart = new Chart(ctxResponse, {
+                type: 'bar', // Can also be 'line' or 'doughnut'
+                data: mockResponseData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Last 6 Months Trend', font: { size: 16 } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Days' }
+                        }
+                    }
+                }
+            });
+
+            // Update the prominent response time display
+            const avgResponseTime = mockResponseData.datasets[0].data[mockResponseData.datasets[0].data.length - 1];
+            document.getElementById('avg-response-time').textContent = `${avgResponseTime} Days`;
+
+            const statusText = document.getElementById('response-status');
+            if (avgResponseTime <= 4) {
+                statusText.textContent = 'Excellent!';
+                statusText.style.color = 'var(--secondary-color)';
+            } else if (avgResponseTime <= 6) {
+                statusText.textContent = 'Good.';
+                statusText.style.color = 'var(--accent-color)';
+            } else {
+                statusText.textContent = 'Needs Improvement.';
+                statusText.style.color = 'var(--high-priority)';
+            }
+            
+            // Complaint category 3D-look chart removed (consolidated to a single analytics chart on the home page)
+            
+            // Hamburger menu toggle logic
+            const menuToggle = document.getElementById('menu-toggle');
+            const navLinks = document.querySelector('#nav-links');
+
+            if (menuToggle && navLinks) {
+                menuToggle.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                });
+            }
+
+            // --- Department Pie Chart (aggregated by department from localStorage 'complaints') ---
+            (function(){
+                const ctx = document.getElementById('departmentPie') && document.getElementById('departmentPie').getContext('2d');
+                const deptLegend = document.getElementById('deptLegend');
+                const deptStatus = document.getElementById('deptChartStatus');
+                const refreshBtn = document.getElementById('deptRefreshBtn');
+                const genDemoBtn = document.getElementById('deptGenDemoBtn');
+                const clearBtn = document.getElementById('deptClearBtn');
+
+                // Map categories to departments
+                const CATEGORY_TO_DEPT = {
+                    water: 'Water Resources Department',
+                    waste: 'Sanitation Department',
+                    road: 'Public Works Department',
+                    light: 'Electricity Department',
+                    safety: 'Home/Police Department',
+                    other: 'Other/General'
+                };
+
+                const DEPT_COLORS = {
+                    'Water Resources Department': '#007BFF',
+                    'Sanitation Department': '#28a745',
+                    'Public Works Department': '#ff7a00',
+                    'Electricity Department': '#ffd54a',
+                    'Home/Police Department': '#9b59b6',
+                    'Other/General': '#6c757d'
+                };
+
+                function readComplaintsCountsByDept(){
+                    const arr = JSON.parse(localStorage.getItem('complaints') || '[]');
+                    const counts = {};
+                    // initialize
+                    Object.values(CATEGORY_TO_DEPT).forEach(d => counts[d] = 0);
+                    arr.forEach(c => {
+                        const cat = c.category || 'other';
+                        const dept = CATEGORY_TO_DEPT[cat] || CATEGORY_TO_DEPT['other'];
+                        counts[dept] = (counts[dept] || 0) + 1;
+                    });
+                    return counts;
+                }
+
+                let deptChart = null;
+
+                function renderDeptChart(){
+                    if (!ctx) return;
+                    const counts = readComplaintsCountsByDept();
+                    const labels = Object.keys(counts);
+                    const data = labels.map(l => counts[l]);
+                    const hasAny = data.some(v => v>0);
+
+                    if (!hasAny) {
+                        // Seed with provided mock complaints if none exist (uses sample entries from track_status)
+                        const seeded = [
+                            { id: 'MOCK-2025-1004', category: 'water', title: 'Water logging near market', location: 'Ranchi, Main Market', status: 'In Progress', timestamp: 1695717000000 },
+                            { id: 'MOCK-2025-1005', category: 'light', title: 'Broken Streetlight', location: 'Dhanbad, Sector 4', status: 'Resolved', timestamp: 1695555600000 },
+                            { id: 'MOCK-2025-1006', category: 'waste', title: 'Illegal Waste Dumping', location: 'Jamshedpur Bypass', status: 'Pending', timestamp: 1695889200000 }
+                        ];
+                        try {
+                            localStorage.setItem('complaints', JSON.stringify(seeded));
+                        } catch (e) { console.error('Failed to seed complaints', e); }
+
+                        // re-read counts
+                        const counts2 = readComplaintsCountsByDept();
+                        const labels2 = Object.keys(counts2);
+                        const data2 = labels2.map(l => counts2[l]);
+                        const hasAny2 = data2.some(v => v>0);
+                        if (!hasAny2) {
+                            deptStatus.textContent = 'No reports available yet. Generate demo data to preview.';
+                            if (deptLegend) deptLegend.innerHTML = '';
+                            if (deptChart) { deptChart.destroy(); deptChart = null; }
+                            return;
+                        }
+                        // assign for normal flow
+                        labels.splice(0, labels.length, ...labels2);
+                        data.splice(0, data.length, ...data2);
+                    }
+
+                    deptStatus.textContent = '';
+
+                    const bg = labels.map(l => DEPT_COLORS[l] || '#999');
+
+                    if (deptChart) deptChart.destroy();
+
+                    deptChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels, datasets: [{ data, backgroundColor: bg }] },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            cutout: '45%'
+                        }
+                    });
+
+                    // render legend
+                    if (deptLegend) {
+                        deptLegend.innerHTML = '';
+                        labels.forEach((l,i) => {
+                            const count = data[i];
+                            const el = document.createElement('div');
+                            el.style.display = 'flex'; el.style.alignItems = 'center'; el.style.gap = '8px'; el.style.marginBottom = '8px';
+                            const sw = document.createElement('span'); sw.style.width='18px'; sw.style.height='18px'; sw.style.display='inline-block'; sw.style.borderRadius='4px'; sw.style.background = bg[i];
+                            const label = document.createElement('div'); label.innerHTML = `<strong>${l}</strong> &nbsp; (${count})`;
+                            el.appendChild(sw); el.appendChild(label);
+                            deptLegend.appendChild(el);
+                        });
+                    }
+                }
+
+                function generateDemoComplaints(){
+                    const cats = Object.keys(CATEGORY_TO_DEPT);
+                    const sample = [];
+                    for (let i=0;i<60;i++) sample.push({ category: cats[Math.floor(Math.random()*cats.length)], timestamp: Date.now() - Math.floor(Math.random()*10000000) });
+                    localStorage.setItem('complaints', JSON.stringify(sample));
+                    renderDeptChart();
+                    deptStatus.textContent = 'Demo complaints generated.';
+                }
+
+                if (refreshBtn) refreshBtn.addEventListener('click', renderDeptChart);
+                if (genDemoBtn) genDemoBtn.addEventListener('click', generateDemoComplaints);
+                if (clearBtn) clearBtn.addEventListener('click', () => { localStorage.removeItem('complaints'); renderDeptChart(); deptStatus.textContent = 'Cleared stored complaints.'; });
+
+                // initial render after small delay to ensure DOM and storage ready
+                setTimeout(renderDeptChart, 300);
+
+                // refresh chart when complaints change in another tab/window
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'complaints') renderDeptChart();
+                });
+            })();
+        };
+    </script>
+</body>
+</html>

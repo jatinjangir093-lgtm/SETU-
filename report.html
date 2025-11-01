@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00A6FF">
+    <meta name="msapplication-TileColor" content="#032B4A">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Report a New Issue</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome for graphical icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> 
+    <style>
+        /* CSS for the horizontal category buttons */
+        .issue-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px; /* Spacing between buttons */
+            margin-bottom: 25px;
+            justify-content: flex-start; /* Align to the start of the row */
+        }
+        
+        .category-option {
+            flex-grow: 1; /* Allow buttons to grow to fill space */
+            flex-basis: 150px; /* Base width for wrapping on smaller screens */
+            padding: 20px 10px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-option:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .category-option.selected {
+            background-color: #e0f7ff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+            transform: scale(1.02);
+        }
+
+        /* Vibrant dynamic icon wrapper */
+        .category-option .icon-wrap {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            background-size: 200% 200%;
+            background-position: 0% 50%;
+        }
+
+        .category-option .icon-wrap svg {
+            width: 40px;
+            height: 40px;
+            display: block;
+        }
+
+        /* Animated gradient shift for vibrancy */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .icon-wrap {
+            animation: gradientShift 6s ease infinite;
+        }
+
+        /* Selected state glows */
+        .category-option.selected .icon-wrap {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            filter: drop-shadow(0 6px 18px rgba(0,0,0,0.18));
+        }
+        
+        /* ADDED CSS FOR IMPROVED PRIORITY SECTION */
+        .priority-level-grid {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .priority-option {
+            flex: 1;
+            padding: 15px 10px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .priority-option input[type="radio"] {
+            display: none; /* Hide the default radio button */
+        }
+
+        .priority-option.high {
+            color: var(--high-priority);
+            border-color: #f7a8b0;
+        }
+        .priority-option.medium {
+            color: var(--accent-color);
+            border-color: #ffe08a;
+        }
+        .priority-option.low {
+            color: var(--low-priority);
+            border-color: #a8e8f2;
+        }
+
+        /* State when selected */
+        .priority-option input[type="radio"]:checked + label {
+            display: block; /* Ensure label is visible */
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.4);
+        }
+        
+        .priority-option.high input[type="radio"]:checked + label {
+            background-color: var(--high-priority);
+            color: white;
+        }
+        .priority-option.medium input[type="radio"]:checked + label {
+            background-color: var(--accent-color);
+            color: var(--text-dark);
+        }
+        .priority-option.low input[type="radio"]:checked + label {
+            background-color: var(--low-priority);
+            color: white;
+        }
+        .priority-option label {
+            display: block; /* Make label fill the container */
+            padding: 0;
+            margin: -15px -10px; /* Counter-act parent padding for full background color */
+            border-radius: 6px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Responsive Navigation Styles */
+        .menu-toggle {
+            display: none;
+            cursor: pointer;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 21px;
+            margin-left: 10px;
+        }
+
+        .menu-toggle .bar {
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            nav {
+                justify-content: space-between;
+            }
+
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                background-color: var(--bg-dark);
+                position: absolute;
+                top: 60px;
+                left: 0;
+                text-align: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding-bottom: 10px;
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .nav-links a {
+                margin: 0;
+                padding: 15px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        /* ...existing code... */
+    </style>
+</head>
+<body>
+    <!-- Loading spinner (shows on toggle clicks) -->
+    <div id="temp-loader" class="loader-container loader-hidden">
+        <div class="loader"></div>
+        <div class="loading-text">Loading, please wait...</div>
+    </div>
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">THE CITIZENS</a></div>
+            <div style="display: flex; align-items: center;">
+                <div class="menu-toggle" id="menu-toggle">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+                <div class="nav-links" id="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="report.html" class="active">Report Issue</a>
+                    <a href="track_status.html">Track Status</a>
+                    <a href="login.html">Admin Login</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="card">
+            <h1>File Your Complaint</h1>
+            <p style="margin-bottom: 25px; color: #666;">Please provide accurate details to ensure prompt action.</p>
+
+            <form id="complaintForm">
+                
+                <!-- 1. ISSUE CATEGORY (Graphical Selection) -->
+                <div class="form-group">
+                    <label>1. Select Issue Category *</label>
+                    <div class="issue-categories">
+                        <!-- Category buttons with inline SVG icons and animated gradient fills -->
+                        <div class="category-option" data-category="water">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-water" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#00A6FF">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#0072FF">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-water)" />
+                                    <path d="M32 12c0 0-12 12-12 20a12 12 0 0 0 24 0C44 24 32 12 32 12z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Water Mgmt</span>
+                        </div>
+
+                        <div class="category-option" data-category="waste">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-waste" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#28a745">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#8be04b">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-waste)" />
+                                    <path d="M22 20h20l-2 28H24L22 20zM26 16h12v4H26z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Waste Mgmt</span>
+                        </div>
+
+                        <div class="category-option" data-category="road">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-road" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#ff7a00">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#ffd166">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-road)" />
+                                    <path d="M28 10v8l-6 28h20l-6-28v-8h-2v0H28z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Road & Infra</span>
+                        </div>
+
+                        <div class="category-option" data-category="light">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-light" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#ffd54a">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#ffb142">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-light)" />
+                                    <path d="M32 16a8 8 0 0 0-6 12c1 1 2 2 2 5v3h8v-3c0-3 1-4 2-5a8 8 0 0 0-6-12z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Street Light</span>
+                        </div>
+
+                        <div class="category-option" data-category="safety">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-safety" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#9b59b6">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#ff6b6b">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-safety)" />
+                                    <path d="M32 8l12 6v10c0 12-12 18-12 18s-12-6-12-18V14l12-6z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Public Safety</span>
+                        </div>
+
+                        <div class="category-option" data-category="other">
+                            <div class="icon-wrap">
+                                <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="grad-other" x1="0%" x2="100%">
+                                            <stop offset="0%" stop-color="#6c757d">
+                                                <animate attributeName="offset" values="0;1;0" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                            <stop offset="100%" stop-color="#adb5bd">
+                                                <animate attributeName="offset" values="1;0;1" dur="6s" repeatCount="indefinite" />
+                                            </stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="32" cy="32" r="30" fill="url(#grad-other)" />
+                                    <path d="M22 30a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm10 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm10 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" fill="#fff"/>
+                                </svg>
+                            </div>
+                            <span>Others</span>
+                        </div>
+                        <input type="hidden" name="issueCategory" id="issueCategory" required>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC INPUT FOR 'OTHER' CATEGORY -->
+                <div class="form-group" id="otherIssueNameGroup" style="display: none;">
+                    <label for="otherIssueName">Specify Issue Name *</label>
+                    <input type="text" id="otherIssueName" name="otherIssueName" placeholder="e.g., Lack of public toilet facility" required>
+                </div>
+
+                <!-- 2. ISSUE DETAILS -->
+                <h2>Issue Details</h2>
+                <div class="form-group">
+                    <label for="issueTitle">Title of Issue *</label>
+                    <input type="text" id="issueTitle" name="issueTitle" placeholder="e.g., Large potholes on NH-33" required>
+                </div>
+                <div class="form-group">
+                    <label for="issueDescription">Description of Issue *</label>
+                    <textarea id="issueDescription" name="issueDescription" rows="5" placeholder="Provide detailed context, landmarks, and severity." required></textarea>
+                </div>
+                
+                <!-- AUTOMATIC LOCATION FEATURE -->
+                <div class="form-group">
+                    <label for="location">Location (Automatic GPS / Manual Entry) *</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="location" name="location" placeholder="Fetching current location..." required style="flex-grow: 1;">
+                        <button type="button" class="btn btn-primary" id="getGpsBtn" style="width: auto; padding: 10px 15px;">
+                            <i class="fas fa-map-marker-alt"></i> Get GPS
+                        </button>
+                    </div>
+                    <small id="locationStatus" style="color: var(--primary-color); margin-top: -10px; display: block;">Click "Get GPS" to auto-fill location.</small>
+                </div>
+                
+                <!-- CAMERA-ONLY UPLOAD (NOW ALSO ACCEPTS VIDEO) -->
+                <div class="form-group">
+                    <label for="issuePhoto">Capture Photo or Video (Camera Only)</label>
+                    <input type="file" id="issuePhoto" name="issuePhoto" accept="image/*,video/*" capture="user">
+                </div>
+
+                <!-- NEW: VOICE NOTE FEATURE -->
+                <div class="form-group">
+                    <label for="voiceNote">Add a Voice Note (Optional)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" class="btn btn-primary" id="startRecordingBtn">
+                            <i class="fas fa-microphone"></i> Start Recording
+                        </button>
+                        <button type="button" class="btn btn-primary" id="stopRecordingBtn" disabled>
+                            <i class="fas fa-stop"></i> Stop Recording
+                        </button>
+                        <span id="recordingStatus" style="font-style: italic;">Ready</span>
+                    </div>
+                </div>
+                <!-- 3. IMPROVED PRIORITY LEVEL 
+                <h2>3. Priority Level (Select One)</h2>
+                <div class="priority-level-grid">
+                    <div class="priority-option high">
+                        <input type="radio" id="priorityHigh" name="priority" value="High" required>
+                        <label for="priorityHigh">High <br> (Urgent/Hazard)</label>
+                    </div>
+                    
+                    <div class="priority-option medium">
+                        <input type="radio" id="priorityMedium" name="priority" value="Medium">
+                        <label for="priorityMedium">Medium <br> (Needs Attention)</label>
+                    </div>
+                    
+                    <div class="priority-option low">
+                        <input type="radio" id="priorityLow" name="priority" value="Low">
+                        <label for="priorityLow">Low <br> (Routine Maintenance)</label>
+                    </div>
+                </div>
+                -->
+                <!-- 4. CONTACT INFORMATION -->
+                <h2>4. Your Contact Information</h2>
+                <div class="form-group">
+                    <label for="reporterName">Your Name *</label>
+                    <input type="text" id="reporterName" name="reporterName" required>
+                </div>
+                <div class="form-group">
+                    <label for="reporterContact">Contact Number/Email *</label>
+                    <input type="text" id="reporterContact" name="reporterContact" required>
+                </div>
+
+                <!-- OTP Verification Step -->
+                <div id="otpVerification" style="display: none;">
+                    <h2>Verify Your Contact</h2>
+                    <p style="margin-bottom: 15px;">Please verify your contact information to submit the complaint.</p>
+                    <div class="form-group">
+                        <input type="text" id="otpInput" maxlength="6" placeholder="Enter 6-digit OTP" style="font-size: 20px; text-align: center; letter-spacing: 2px;">
+                        <p id="otpMessage" style="margin-top: 10px; font-weight: bold;"></p>
+                        <button type="button" id="verifyOtpBtn" class="btn btn-primary" style="margin-top: 10px; width: 100%;">Verify OTP</button>
+                        <button type="button" id="resendOtpBtn" class="btn" style="margin-top: 10px; width: 100%; background: none; border: 1px solid var(--primary-color); color: var(--primary-color);">Resend OTP</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary" style="margin-top: 20px;">SUBMIT COMPLAINT</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Reports Summary removed: pie chart consolidated to home page -->
+
+    <style>
+        /* OTP Verification Styles */
+        #otpVerification {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: var(--bg-light);
+            border: 1px solid var(--primary-color);
+        }
+        #otpInput {
+            width: 180px;
+            padding: 12px;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        #otpInput:focus {
+            box-shadow: 0 0 0 3px rgba(0,166,255,0.2);
+        }
+        #otpMessage.success {
+            color: #4CAF50;
+        }
+        #otpMessage.error {
+            color: var(--high-priority);
+        }
+    </style>
+
+    <!-- ========== SOS BUTTON + MODAL (ADDED) ==========
+         - The SOS button is fixed and always visible.
+         - Clicking opens a modal that loads a Jitsi Meet room (or new window as fallback).
+         - For production use with private/direct calls, integrate with a signaling service or Twilio,
+           and secure credentials; this demo uses public Jitsi rooms for simplicity.
+         ================================================== -->
+    <!-- ...existing code... -->
+
+    <!-- FOOTER and Scripts -->
+    <footer>
+        <p style="text-align: center; padding: 15px; color: #fff; background: var(--bg-dark); margin-top: 20px;">&copy; 2025 Jharkhand Govt. Civic Dashboard</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Navigation Logic ---
+            const menuToggle = document.getElementById('menu-toggle');
+            const navLinks = document.getElementById('nav-links');
+            if (menuToggle && navLinks) {
+                menuToggle.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                });
+            }
+
+            // --- 1. CATEGORY SELECTION and DYNAMIC INPUT ---
+            const categoryOptions = document.querySelectorAll('.category-option');
+            // ...existing code: icons are inline SVGs with animated gradients in markup
+            const otherIssueNameGroup = document.getElementById('otherIssueNameGroup');
+            const otherIssueName = document.getElementById('otherIssueName');
+            const issueCategory = document.getElementById('issueCategory');
+
+            categoryOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove 'selected' class from all options
+                    categoryOptions.forEach(el => el.classList.remove('selected'));
+                    // Add 'selected' class to the clicked option
+                    this.classList.add('selected');
+                    
+                    const category = this.dataset.category;
+                    issueCategory.value = category;
+
+                    // Show/hide 'Other' input based on selection
+                    if (category === 'other') {
+                        otherIssueNameGroup.style.display = 'block';
+                        otherIssueName.required = true;
+                    } else {
+                        otherIssueNameGroup.style.display = 'none';
+                        otherIssueName.required = false;
+                    }
+                });
+            });
+
+            // --- 2. GPS GEOLOCATION ---
+            const getGpsBtn = document.getElementById('getGpsBtn');
+            if (getGpsBtn) {
+                getGpsBtn.addEventListener('click', function() {
+                    const locationInput = document.getElementById('location');
+                    const statusText = document.getElementById('locationStatus');
+                    
+                    if (navigator.geolocation) {
+                        statusText.textContent = 'Attempting to fetch your current location...';
+                        statusText.style.color = 'var(--primary-color)';
+                        
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const lat = position.coords.latitude;
+                                const lon = position.coords.longitude;
+                                locationInput.value = `GPS Coords: Lat ${lat.toFixed(4)}, Lon ${lon.toFixed(4)}`;
+                                statusText.textContent = 'Location fetched successfully!';
+                                statusText.style.color = 'var(--secondary-color)';
+                            },
+                            (error) => {
+                                locationInput.value = '';
+                                statusText.textContent = `Error fetching location: ${error.message}. Please enter manually.`;
+                                statusText.style.color = 'var(--high-priority)';
+                            },
+                            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                        );
+                    } else {
+                        locationInput.value = '';
+                        statusText.textContent = 'Geolocation is not supported by your browser/device.';
+                        statusText.style.color = 'var(--high-priority)';
+                    }
+                });
+            }
+
+            // --- 3. VOICE NOTE RECORDING MOCK ---
+            const startRecordingBtn = document.getElementById('startRecordingBtn');
+            const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+            const recordingStatus = document.getElementById('recordingStatus');
+
+            if (startRecordingBtn && stopRecordingBtn && recordingStatus) {
+                startRecordingBtn.addEventListener('click', () => {
+                    // MOCK START
+                    recordingStatus.textContent = 'Recording...';
+                    startRecordingBtn.disabled = true;
+                    stopRecordingBtn.disabled = false;
+                });
+
+                stopRecordingBtn.addEventListener('click', () => {
+                    // MOCK STOP
+                    recordingStatus.textContent = 'Recording saved!';
+                    startRecordingBtn.disabled = false;
+                    stopRecordingBtn.disabled = true;
+                });
+            }
+
+            // --- 4. FORM SUBMISSION WITH OTP VERIFICATION ---
+            const complaintForm = document.getElementById('complaintForm');
+            const otpVerification = document.getElementById('otpVerification');
+            const otpInput = document.getElementById('otpInput');
+            const otpMessage = document.getElementById('otpMessage');
+            const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+            const resendOtpBtn = document.getElementById('resendOtpBtn');
+            const submitBtn = document.getElementById('submitBtn');
+
+            let generatedOTP = "";
+            let isOtpVerified = false;
+
+            function showOtpMessage(message, isError = false) {
+                otpMessage.textContent = message;
+                otpMessage.className = isError ? 'error' : 'success';
+            }
+
+            function generateOTP() {
+                generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+                console.log('Generated OTP:', generatedOTP); // For testing, remove in production
+                return generatedOTP;
+            }
+
+            function startOtpTimer(duration) {
+                let timer = duration;
+                resendOtpBtn.disabled = true;
+                
+                const interval = setInterval(() => {
+                    if (timer <= 0) {
+                        clearInterval(interval);
+                        resendOtpBtn.disabled = false;
+                        resendOtpBtn.textContent = 'Resend OTP';
+                        return;
+                    }
+                    resendOtpBtn.textContent = `Resend OTP (${timer}s)`;
+                    timer--;
+                }, 1000);
+            }
+
+            if(complaintForm) {
+                complaintForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Basic validation
+                    if (otherIssueName.required && otherIssueName.style.display !== 'none' && !otherIssueName.value.trim()) {
+                        alert('Please specify the issue name for the "Other" category.');
+                        return;
+                    }
+
+                    // Check if OTP is already verified
+                    if (isOtpVerified) {
+                        // Collect form data and persist to localStorage (simple demo persistence)
+                        const formData = {
+                            id: 'MOCK-2025-' + Math.floor(1000 + Math.random() * 9000),
+                            category: issueCategory.value || 'other',
+                            otherName: otherIssueName.value || '',
+                            title: document.getElementById('issueTitle').value,
+                            description: document.getElementById('issueDescription').value,
+                            location: document.getElementById('location').value,
+                            reporterName: document.getElementById('reporterName').value,
+                            reporterContact: document.getElementById('reporterContact').value,
+                            timestamp: Date.now()
+                        };
+
+                        try {
+                            const existing = JSON.parse(localStorage.getItem('complaints') || '[]');
+                            existing.push(formData);
+                            localStorage.setItem('complaints', JSON.stringify(existing));
+                        } catch (err) {
+                            console.error('Failed to save complaint locally', err);
+                        }
+
+                        // Chart refresh removed (chart consolidated on home page)
+
+                        // Submit the form (mock)
+                        alert('Complaint Submitted Successfully! Your Complaint ID is ' + formData.id + '. You will now be redirected to the tracking page.');
+                        window.location.href = 'track_status.html?id=' + formData.id;
+                        return;
+                    }
+
+                    // Show OTP verification
+                    otpVerification.style.display = 'block';
+                    submitBtn.style.display = 'none';
+
+                    // Generate and send OTP
+                    generateOTP();
+                    showOtpMessage('OTP sent to your contact number!', false);
+                    startOtpTimer(30); // 30 second countdown for resend
+                });
+            }
+
+            // Verify OTP button click
+            if (verifyOtpBtn) {
+                verifyOtpBtn.addEventListener('click', function() {
+                    const enteredOTP = otpInput.value.trim();
+                    
+                    if (enteredOTP === generatedOTP) {
+                        showOtpMessage('✅ OTP Verified Successfully!');
+                        isOtpVerified = true;
+                        submitBtn.style.display = 'block';
+                        submitBtn.textContent = 'Submit Verified Complaint';
+                    } else {
+                        showOtpMessage('❌ Invalid OTP. Please try again.', true);
+                    }
+                });
+            }
+
+            // Resend OTP button click
+            if (resendOtpBtn) {
+                resendOtpBtn.addEventListener('click', function() {
+                    if (!resendOtpBtn.disabled) {
+                        generateOTP();
+                        showOtpMessage('New OTP sent!', false);
+                        startOtpTimer(30);
+                    }
+                });
+            }
+
+            // Reports pie chart code removed (consolidated on home page)
+
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

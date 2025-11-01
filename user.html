@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="refresh" content="3;url=index.html">
+    <title>Removed — User Verification</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      body { font-family: var(--font-family, Arial, sans-serif); background: var(--bg-light); color: var(--text-dark); display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+      .notice { max-width:520px; background:#fff; padding:28px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.08); text-align:center; }
+      .notice h1 { margin:0 0 8px 0; font-size:1.4rem; color:var(--primary-color); }
+      .notice p { margin:8px 0; color:#444; }
+      .notice a { display:inline-block; margin-top:12px; padding:10px 16px; background:var(--primary-color); color:#fff; border-radius:8px; text-decoration:none; }
+    </style>
+  </head>
+  <body>
+    <div class="notice">
+      <h1>Page Removed</h1>
+      <p>The User Verification page has been removed. You will be redirected back to the home page shortly.</p>
+      <p>If you are not redirected, <a href="index.html">click here to go home</a>.</p>
+    </div>
+  </body>
+</html>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="profile-section">
+                        <h3><i class="fas fa-tasks"></i> Verification Status</h3>
+                        <ul>
+                            <li>
+                                <i class="fas fa-check-circle"></i>
+                                Email Verification Complete
+                            </li>
+                            <li>
+                                <i class="fas fa-check-circle"></i>
+                                Phone Number Verified
+                            </li>
+                            <li>
+                                <i class="fas fa-check-circle"></i>
+                                Two-Factor Authentication Active
+                            </li>
+                            <li>
+                                <i class="fas fa-star"></i>
+                                Account Status: Active
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            // Add back to home button
+            const backButton = document.createElement('a');
+            backButton.href = 'index.html';
+            backButton.className = 'back-to-dashboard';
+            backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Home';
+            document.body.appendChild(backButton);
+        }
+
+        // Initialize event listeners
+        document.getElementById('email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') validateAndNext(1);
+        });
+
+        document.getElementById('phone').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') validateAndNext(2);
+        });
+
+        document.getElementById('otpInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyOTP();
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

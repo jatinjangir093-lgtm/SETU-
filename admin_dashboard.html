@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00A6FF">
+    <meta name="msapplication-TileColor" content="#032B4A">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Dashboard - Jharkhand Civic</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Leaflet CSS for the map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        /* Additional CSS for the map container */
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        /* ========== SOS STYLES (moved from report.html) ========== */
+        .sos-btn {
+            display: flex; /* visible on dashboard for admins */
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 9999;
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: linear-gradient(180deg,#ff3b30,#c72b24);
+            color: #fff;
+            font-weight: 700;
+            border: 4px solid rgba(255,255,255,0.12);
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(199,43,36,0.35);
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
+            user-select: none;
+        }
+        .sos-btn:active { transform: scale(0.98); }
+        .sos-btn .label { font-size: 13px; text-align: center; line-height: 1; }
+        .sos-btn .icon { font-size: 22px; margin-bottom: 4px; display: block; }
+
+        .sos-modal {
+            display: none; /* shown/hidden via JS */
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+        .sos-modal.active { display: flex; }
+
+        .sos-modal-content {
+            width: min(1100px, 98%);
+            height: min(700px, 92%);
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sos-frame {
+            flex: 1;
+            border: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .sos-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 2;
+        }
+        .sos-controls button {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border: 0;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        @media (max-width:420px) {
+            .sos-btn { width: 72px; height: 72px; right: 12px; bottom: 12px; }
+            .sos-btn .label { font-size: 12px; }
+        }
+        /* ===================================================== */
+        
+        /* FIX: Ensure table columns don't overlap */
+        .complaints-section table {
+            width: 100%;
+            table-layout: fixed; /* Ensures columns respect defined widths */
+            word-wrap: break-word; /* Prevents long words from breaking layout */
+        }
+        
+        .complaints-section th, .complaints-section td {
+            white-space: normal; /* Allows text to wrap */
+            padding: 10px 8px; /* Slightly reduced vertical padding for compactness */
+            text-align: left; /* Default alignment */
+            vertical-align: middle; /* Vertical center alignment */
+        }
+
+        /* NEW FIX: Center alignment for all header cells */
+        .complaints-section th {
+            text-align: center !important;
+        }
+
+        /* NEW FIX: Center alignment for ID, Priority, Status, and Action column contents */
+        .complaints-section td:nth-child(1), /* ID */
+        .complaints-section td:nth-child(3), /* Priority */
+        .complaints-section td:nth-child(4) { /* Status */
+            text-align: center;
+        }
+        
+        /* FIX: Ensure Issue Title (2nd column content) is clearly left-aligned */
+        .complaints-section td:nth-child(2) { 
+            text-align: center;
+        }
+
+        .complaints-section td:nth-child(5) {
+            /* Ensures action buttons are centered in the cell */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center; 
+        }
+        
+        /* Modal Styles (Z-INDEX FIX APPLIED) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000; /* Base Z-Index for primary modals (like fullListModal) */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Higher Z-Index for nested assignment/resolution modals */
+        #assignmentModal, #resolvedModal, #priorityModal {
+            z-index: 1001; /* Set secondary modals higher than the Full List Modal */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* Adjusted margin for larger modal */
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%; /* Increased width */
+            max-width: 900px; /* Increased max width */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .modal-content p {
+            margin-bottom: 8px;
+        }
+        
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* FIX: Add spacing to action buttons */
+        .complaints-section td button,
+        .complaints-section td select {
+            margin-right: 5px;
+            margin-bottom: 5px; /* Ensures stacking on smaller screens */
+        }
+        /* FIX: Made the status and priority color boxes smaller */
+        .status-resolved, .status-pending, .status-in-progress,
+        .priority-high, .priority-low, .priority-new {
+            font-size: 0.75em; /* Further reduced font size */
+            padding: 2px 5px; /* Reduced padding for a more compact look */
+            border-radius: 3px; /* Smaller border radius */
+        }
+        .priority-new {
+             background-color: rgba(18, 124, 238, 0.1); 
+             color: var(--primary-color);
+        }
+        .priority-low {
+             background-color: rgba(1, 176, 203, 0.1); 
+             color: var(--low-priority); /* Ensuring low priority color is used */
+        }
+        .priority-medium{
+            font-size: 0.75em; /* Further reduced font size */
+            padding: 2px 5px; /* Reduced padding for a more compact look */
+            border-radius: 3px; /* Smaller border radius */
+            color: rgba(252, 107, 3);
+            background-color: rgba(252, 107, 3,0.1);
+
+        }
+        /* NEW: Styling for the disabled 'Forwarded' button state */
+        .btn-forwarded-mock {
+            background-color: #ccc !important;
+            color: #666;
+            cursor: not-allowed;
+            pointer-events: none;
+            transition: all 0.2s;
+        }
+        
+        /* NEW: Animation for row removal */
+        .row-disappear {
+            opacity: 0;
+            height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border: none;
+            transition: opacity 0.5s ease-out, height 0.5s ease-out, padding 0.5s ease-out;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+        .see-more-row td {
+            padding: 15px 10px !important;
+            background-color: #f8f8f8;
+            border-top: 1px solid #eee;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <!-- Background canvas (added by script.js) -->
+    <!-- Loading Animation -->
+    <div class="loader-container" id="loader">
+        <div class="loader">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div id="loadingStatus" style="text-align: center; color: var(--primary-color); margin-top: 15px; font-size: 0.9em;">
+            Initializing Dashboard...
+        </div>
+    </div>
+    <!-- ========== SOS BUTTON + MODAL (moved here) ==========
+         - Only available to logged-in admins from the dashboard.
+         ====================================================== -->
+    <div role="dialog" aria-hidden="true" class="sos-modal" id="sosModal" aria-label="Emergency video call modal">
+        <div class="sos-modal-content" role="document">
+            <div class="sos-controls" aria-hidden="false">
+                <button id="sosPopoutBtn" title="Open in new window">Pop-out</button>
+                <button id="sosCloseBtn" title="End call & close">End Call</button>
+            </div>
+            <!-- iframe will load the third-party video call UI (Jitsi in this example) -->
+            <iframe class="sos-frame" id="sosFrame" src="" allow="camera; microphone; fullscreen; autoplay; display-capture"></iframe>
+        </div>
+    </div>
+
+    <!-- Floating SOS button -->
+    <button id="sosBtn" class="sos-btn" aria-label="Emergency SOS button" title="Press to start emergency video call">
+        <span style="display:flex;flex-direction:column;align-items:center;">
+            <span class="icon">🔴</span>
+            <span class="label">SOS</span>
+        </span>
+    </button>
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">DASHBOARD</a></div>
+            <div class="nav-links">
+                <a href="admin_dashboard.html" class="active">Dashboard</a>
+                <a href="#" onclick="localStorage.removeItem('adminDetails'); alert('Logging out...'); window.location.href='login.html';" style="background-color: var(--high-priority);">Logout</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-container">
+    <h1 id="dashboard-title">Loading Dashboard...</h1> 
+
+        <!-- 1. NEW REPORTS SECTION (TRIAGE/PRIORITY SETTING) -->
+        <section class="card complaints-section">
+            <h2 class="section-title">1. New Reports (Set Priority)</h2>
+            <div style="overflow-x: auto;">
+                <table id="new-reports-table">
+                    <!-- FIX: Added Colgroup for width definition -->
+                    <colgroup>
+                        <col style="width: 8%;"> 
+                        <col style="width: 40%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 24%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Issue Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="new-reports-list">
+                        <!-- Data rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 2. HIGH PRIORITY SECTION (ACTIONABLE) -->
+        <section class="card complaints-section">
+            <h2 class="section-title">2. High Priority Issues</h2>
+            <div style="overflow-x: auto;">
+                <table id="high-priority-table">
+                    <!-- FIX: Added Colgroup for width definition -->
+                    <colgroup>
+                        <col style="width: 8%;"> 
+                        <col style="width: 40%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 24%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Issue Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="high-priority-list">
+                        <!-- Data rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. MEDIUM PRIORITY SECTION (ACTIONABLE) -->
+        <section class="card complaints-section">
+            <h2 class="section-title">3. Medium Priority Issues</h2>
+            <div style="overflow-x: auto;">
+                <table id="medium-priority-table">
+                    <!-- FIX: Added Colgroup for width definition -->
+                    <colgroup>
+                        <col style="width: 8%;"> 
+                        <col style="width: 40%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 24%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Issue Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="medium-priority-list">
+                        <!-- Data rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- 4. LOW PRIORITY SECTION (ACTIONABLE - NEW) -->
+        <section class="card complaints-section">
+            <h2 class="section-title">4. Low Priority Issues</h2>
+            <div style="overflow-x: auto;">
+                <table id="low-priority-table">
+                    <!-- FIX: Added Colgroup for width definition -->
+                    <colgroup>
+                        <col style="width: 8%;"> 
+                        <col style="width: 40%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 24%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Issue Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="low-priority-list">
+                        <!-- Data rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Map Section (NOW LAST) -->
+        <section class="card map-section">
+            <h2 class="section-title">Complaint & Efficiency Map</h2>
+            <div id="map"></div>
+        </section>
+    </main>
+    
+    <!-- MODALS SECTION -->
+    
+    <!-- Priority Setting Modal (NEW) -->
+    <div id="priorityModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('priorityModal')">&times;</span>
+            <h3 id="priorityModalTitle">Set Priority for Complaint #<span id="currentPriorityIssueId"></span></h3>
+            <form id="priorityForm">
+                <input type="hidden" id="priorityIssueId">
+                
+                <div class="form-group">
+                    <label>Select Priority Level:</label>
+                    <div style="display: flex; gap: 15px; margin-top: 10px;">
+                        <button type="button" class="btn btn-primary" onclick="setPriorityLevel('High')" style="background-color: var(--high-priority);">High</button>
+                        <button type="button" class="btn btn-primary" onclick="setPriorityLevel('Medium')" style="background-color: var(--accent-color);">Medium</button>
+                        <button type="button" class="btn btn-primary" onclick="setPriorityLevel('Low')" style="background-color: var(--low-priority);">Low</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Assignment Modal (For In Progress status) -->
+    <div id="assignmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('assignmentModal')">&times;</span>
+            <h3 id="assignmentModalTitle">Assign Team for Complaint #<span id="currentIssueId"></span></h3>
+            <form id="assignmentForm">
+                <input type="hidden" id="assignmentIssueId">
+                
+                <div class="form-group">
+                    <label for="assignedName">Assigned Person/Team Name</label>
+                    <input type="text" id="assignedName" name="assignedName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="assignedPhone">Contact Phone Number</label>
+                    <input type="text" id="assignedPhone" name="assignedPhone" required>
+                </div>
+                
+                <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                    *Date and Time will be automatically recorded upon submission.
+                </p>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Submit Assignment</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Resolution Modal (For Resolved status) -->
+    <div id="resolvedModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('resolvedModal')">&times;</span>
+            <h3 id="resolvedModalTitle">Resolve Complaint #<span id="currentResolvedId"></span></h3>
+            <form id="resolvedForm">
+                <input type="hidden" id="resolvedIssueId">
+                
+                <div class="form-group">
+                    <label for="resolutionDesc">Final Resolution Description</label>
+                    <textarea id="resolutionDesc" name="resolutionDesc" rows="4" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resolutionProof">Upload Proof Photo/Video</label>
+                    <input type="file" id="resolutionProof" name="resolutionProof" accept="image/*,video/*" required>
+                </div>
+                
+                <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                    *Submission date and time will be automatically recorded.
+                </p>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">Mark as Resolved</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Full List Modal (NEW) -->
+    <div id="fullListModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('fullListModal')">&times;</span>
+            <h3 id="fullListModalTitle">Full List: High Priority Complaints</h3>
+            
+            <div style="overflow-x: auto; max-height: 70vh;">
+                <table class="full-list-table">
+                    <!-- Full table structure mirrored here for consistency -->
+                    <colgroup>
+                        <col style="width: 8%;"> 
+                        <col style="width: 35%;">
+                        <col style="width: 12%;">
+                        <col style="width: 15%;">
+                        <col style="width: 30%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="text-center">ID</th>
+                            <th>Issue Title</th>
+                            <th class="text-center">Priority</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fullListTableBody">
+                        <!-- Full list of complaints rendered here -->
+                    </tbody>
+                </table>
+            </div>
+            
+        </div>
+    </div>
+
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // --- MOCK DATA ---
+        const mockComplaints = {
+            // --- Existing RANCHI WEST (Electricity, 13 complaints) ---
+            "1001": { id: '1001', lat: 23.330, lon: 85.305, title: 'Power outage in Sector 2', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, progressDetails: 'Issue pending priority triage.', assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-25 10:00:00' },
+            "1003": { id: '1003', lat: 23.332, lon: 85.304, title: 'Broken Streetlights on Main Road', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, progressDetails: 'Issue pending priority triage.', assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-27 08:45:00' },
+            "1011": { id: '1011', lat: 23.335, lon: 85.302, title: 'Fallen electric pole', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'In Progress', priorityLevel: 'Low', efficiency: 'low', progress: 40, progressDetails: 'The issue has been reported to the electricity board. A repair team is on their way.', assignedTo: 'Jharkhand Electricity Board', contactNumber: '+91 87654 32109', registeredDate: '2025-09-22 17:00:00', assignedDate: '2025-09-23 08:00:00' },
+            "1015": { id: '1015', lat: 23.338, lon: 85.306, title: 'Transformer sparking near school', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 12:00:00' },
+            "1016": { id: '1016', lat: 23.332, lon: 85.301, title: 'Street light broken - Main Chowk', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 13:00:00' },
+            "1017": { id: '1017', lat: 23.331, lon: 85.305, title: 'Loose high tension wire', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 14:00:00' },
+            "1018": { id: '1018', lat: 23.336, lon: 85.307, title: 'Meter box vandalized, no power', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'In Progress', priorityLevel: 'Medium', efficiency: 'medium', progress: 30, assignedTo: 'Team 3', contactNumber: '+91 90000 11111', registeredDate: '2025-09-28 15:00:00' },
+            "1019": { id: '1019', lat: 23.334, lon: 85.300, title: 'Illegal tapping reported', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 16:00:00' },
+            "1020": { id: '1020', lat: 23.337, lon: 85.303, title: 'Street light permanently off', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 17:00:00' },
+            "1021": { id: '1021', lat: 23.333, lon: 85.308, title: 'Frequent low voltage issues', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 18:00:00' },
+            "1022": { id: '1022', lat: 23.339, lon: 85.304, title: 'Transformer needs oil change', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'medium', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 19:00:00' },
+            "1023": { id: '1023', lat: 23.330, lon: 85.300, title: 'Power line touching tree branch', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 20:00:00' },
+            "1024": { id: '1024', lat: 23.335, lon: 85.309, title: 'Multiple fuses blown', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'In Progress', priorityLevel: 'Medium', efficiency: 'medium', progress: 60, assignedTo: 'Team 4', contactNumber: '+91 90000 22222', registeredDate: '2025-09-29 08:00:00' },
+            "1025": { id: '1025', lat: 23.333, lon: 85.302, title: 'No streetlights on service road', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 09:00:00' },
+            "1026": { id: '1026', lat: 23.336, lon: 85.304, title: 'Main feeder cable damage', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 10:00:00' },
+            "1027": { id: '1027', lat: 23.338, lon: 85.301, title: 'New meter connection request delay', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'medium', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 11:00:00' },
+            "1028": { id: '1028', lat: 23.331, lon: 85.307, title: 'Recurring fault in substation', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'In Progress', priorityLevel: 'High', efficiency: 'low', progress: 80, assignedTo: 'Special Team', contactNumber: '+91 90000 33333', registeredDate: '2025-09-29 12:00:00' },
+            "1029": { id: '1029', lat: 23.334, lon: 85.305, title: 'Electric pole leaning precariously', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 13:00:00' },
+            "1030": { id: '1030', lat: 23.337, lon: 85.309, title: 'Damaged pole number 45', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'medium', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 14:00:00' },
+            "1031": { id: '1031', lat: 23.332, lon: 85.303, title: 'Street light repair failed (repeated issue)', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-29 15:00:00' },
+            "1032": { id: '1032', lat: 23.339, lon: 85.307, title: 'Low current complaints near school', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-30 08:00:00' },
+            "1033": { id: '1033', lat: 23.334, lon: 85.306, title: 'Fuse box smoking by road', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-30 09:30:00' },
+            "1034": { id: '1034', lat: 23.336, lon: 85.300, title: 'Street light flickering constantly', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'medium', progress: 0, assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-30 10:45:00' },
+            
+            // --- NEW 20 Electricity Complaints for RANCHI WEST (IDs 1035 - 1058) ---
+            // Group 1: High Density Cluster 1 (Hotspot) - Lat 23.34, Lon 85.31
+            "1035": { id: '1035', lat: 23.340, lon: 85.306, title: 'Underground cable fire reported', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', registeredDate: '2025-10-01 09:00:00' },
+            "1036": { id: '1036', lat: 23.341, lon: 85.306, title: 'Public charging station outage', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', registeredDate: '2025-10-01 10:00:00' },
+            "1037": { id: '1037', lat: 23.342, lon: 85.306, title: 'Transformer noise too loud', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'medium', registeredDate: '2025-10-01 11:00:00' },
+            "1038": { id: '1038', lat: 23.340, lon: 85.307, title: 'Overhead wires sagging dangerously', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', registeredDate: '2025-09-29 12:00:00' },
+            "1055": { id: '1055', lat: 23.341, lon: 85.307, title: 'Wire cut by careless tree trimmer', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', registeredDate: '2025-10-03 09:00:00' },
+            "1056": { id: '1056', lat: 23.340, lon: 85.306, title: 'New service line installation needed', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', registeredDate: '2025-10-03 10:00:00' },
+
+            // Group 2: Medium Density Cluster 2 (Hotspot) - Lat 23.35, Lon 85.32
+            "1039": { id: '1039', lat: 23.350, lon: 85.315, title: 'Old wooden pole rotting', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'low', registeredDate: '2025-09-29 13:00:00' },
+            "1040": { id: '1040', lat: 23.351, lon: 85.316, title: 'Service cable damaged by vehicle', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', registeredDate: '2025-09-29 14:00:00' },
+            "1041": { id: '1041', lat: 23.352, lon: 85.315, title: 'No power since morning', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'low', registeredDate: '2025-09-29 15:00:00' },
+            "1042": { id: '1042', lat: 23.350, lon: 85.314, title: 'Street light timer broken', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', registeredDate: '2025-09-29 16:00:00' },
+
+            // Group 3: Low Density Cluster 3 (Hotspot) - Lat 23.33, Lon 85.29
+            "1043": { id: '1043', lat: 23.325, lon: 85.290, title: 'Repeated tripping in residential block', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'medium', registeredDate: '2025-09-29 17:00:00' },
+            "1044": { id: '1044', lat: 23.326, lon: 85.291, title: 'New service pole installation needed', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'low', registeredDate: '2025-09-30 08:00:00' },
+            "1045": { id: '1045', lat: 23.325, lon: 85.292, title: 'Meter reading error', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'New', efficiency: 'medium', registeredDate: '2025-09-30 09:00:00' },
+            
+            // Group 4: Medium Density Cluster 4 (Hotspot) - Lat 23.36, Lon 85.32
+            "1046": { id: '1046', lat: 23.360, lon: 85.320, title: 'Substation gate broken, safety issue', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'High', efficiency: 'low', registeredDate: '2025-09-30 10:00:00' },
+            "1047": { id: '1047', lat: 23.361, lon: 85.321, title: 'No response to prior repair request (ID: 901)', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'low', registeredDate: '2025-09-30 11:00:00' },
+            "1057": { id: '1057', lat: 23.360, lon: 85.322, title: 'Recurring street light failure (Zone A)', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Medium', efficiency: 'low', registeredDate: '2025-10-03 12:00:00' },
+
+            // Group 5: Low Density Cluster 5 (Hotspot) - Lat 23.31, Lon 85.33
+            "1048": { id: '1048', lat: 23.310, lon: 85.330, title: 'Pole light fixture hanging loose', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', registeredDate: '2025-09-30 12:00:00' },
+            "1049": { id: '1049', lat: 23.311, lon: 85.331, title: 'Old wire bundle needs cutting', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', registeredDate: '2025-09-30 13:00:00' },
+            "1058": { id: '1058', lat: 23.310, lon: 85.332, title: 'Temporary power cut not announced', department: 'Electricity', city: 'Ranchi', locality: 'Ranchi West', status: 'Pending', priorityLevel: 'Low', efficiency: 'medium', registeredDate: '2025-10-03 13:00:00' },
+            
+            // --- Other Departments/Cities Complaints (Unchanged) ---
+            "1002": { id: '1002', lat: 23.381, lon: 85.452, title: 'Waterlogging at City Center', department: 'Municipal Corporation', city: 'Ranchi', locality: 'Ranchi East', status: 'In Progress', priorityLevel: 'High', efficiency: 'low', progress: 50, progressDetails: 'Assigned to Team Beta on 2025-09-26. Field assessment pending.', assignedTo: 'Team Beta', contactNumber: '+91 91234 56780', registeredDate: '2025-09-26 12:30:00', assignedDate: '2025-09-26 14:00:00' },
+            "1009": { id: '1009', lat: 23.383, lon: 85.455, title: 'Garbage accumulation', department: 'Municipal Corporation', city: 'Ranchi', locality: 'Ranchi East', status: 'In Progress', priorityLevel: 'Medium', efficiency: 'medium', progress: 50, progressDetails: 'A sanitation team has been dispatched to the location.', assignedTo: 'Sanitation Dept. Team 1', contactNumber: '+91 91234 56789', registeredDate: '2025-09-24 15:00:00', assignedDate: '2025-09-24 16:30:00' },
+            "1004": { id: '1004', lat: 23.344, lon: 85.309, title: 'Water logging near market', department: 'Water Management', city: 'Ranchi', locality: 'Ranchi North', status: 'Pending', priorityLevel: 'New', efficiency: 'low', progress: 20, progressDetails: 'Issue pending priority triage.', assignedTo: 'N/A', contactNumber: 'N/A', registeredDate: '2025-09-28 11:15:00' },
+            "1010": { id: '1010', lat: 23.36, lon: 85.35, title: 'Illegal construction', department: 'Road & Infra', city: 'Ranchi', locality: 'Ranchi Central', status: 'In Progress', priorityLevel: 'High', efficiency: 'high', progress: 70, progressDetails: 'Demolition scheduled; crews mobilized.', assignedTo: 'Road Dept. Team A', contactNumber: '+91 90000 44444', registeredDate: '2025-09-23 09:00:00', assignedDate: '2025-09-24 08:00:00' },
+        
+    };
+    const cityCoordinates = {
+            "Ranchi": { lat: 23.344, lon: 85.309 },
+            "Jamshedpur": { lat: 22.793, lon: 86.183 },
+            "Dhanbad": { lat: 23.795, lon: 86.43 },
+            "Bokaro": { lat: 23.66, lon: 86.15 }
+        };
+        
+        let mapInstance = null;
+        const HOTSPOT_THRESHOLD = 3; // Minimum complaints to be a hotspot
+
+        // Helper function to update the status in the table row
+        function updateTableRowStatus(issueId, newStatus, priorityLevel) {
+            const row = document.querySelector(`tr[data-id="${issueId}"]`);
+            if (!row) return;
+
+            const statusCell = row.querySelector('td:nth-child(4)'); // Status column position in sections 2 & 3
+            if (statusCell) {
+                statusCell.textContent = newStatus;
+                statusCell.className = `status-${newStatus.toLowerCase().replace(' ', '-')}`;
+            }
+
+            // Update mock data status/priority
+            if (mockComplaints[issueId]) {
+                mockComplaints[issueId].status = newStatus;
+                if (priorityLevel) {
+                    mockComplaints[issueId].priorityLevel = priorityLevel;
+                }
+            }
+        }
+
+        // --- SECTION 1: PRIORITY SETTING LOGIC ---
+        function showPriorityModal(issueId) {
+            document.getElementById('priorityIssueId').value = issueId;
+            document.getElementById('currentPriorityIssueId').textContent = issueId;
+            // FIX: Ensure full list modal is closed before opening priority modal
+            closeModal('fullListModal');
+            document.getElementById('priorityModal').style.display = 'block';
+        }
+
+        window.setPriorityLevel = function(newPriority) {
+            const issueId = document.getElementById('priorityIssueId').value;
+            const rowToRemove = document.querySelector(`#new-reports-list tr[data-id="${issueId}"]`);
+
+            if (mockComplaints[issueId]) {
+                // 1. Update mock data priority
+                mockComplaints[issueId].priorityLevel = newPriority;
+                
+                // 2. Set status to Pending (or whatever default state for action list is)
+                mockComplaints[issueId].status = 'Pending';
+                
+                // 3. Smoothly remove from the New Reports table
+                if (rowToRemove) {
+                    rowToRemove.classList.add('row-disappear'); 
+                    setTimeout(() => {
+                        rowToRemove.remove();
+                        // 4. Re-render the affected section(s) to move the item
+                        const adminDetails = JSON.parse(localStorage.getItem('adminDetails'));
+                        renderDashboard(adminDetails); 
+                    }, 500); 
+                }
+                
+                alert(`Complaint ${issueId} priority set to ${newPriority} and moved to the Action list.`);
+                closeModal('priorityModal');
+            }
+        }
+        
+        // --- SECTION 2 & 3: STATUS CHANGE LOGIC ---
+        function updateStatus(issueId, newStatus) {
+            if (newStatus === 'In Progress') {
+                // Open Assignment Modal
+                document.getElementById('assignmentIssueId').value = issueId;
+                document.getElementById('currentIssueId').textContent = issueId;
+                // FIX: Ensure correct modal stacking by closing relevant ones first
+                closeModal('fullListModal'); 
+                document.getElementById('assignmentModal').style.display = 'block';
+            } else if (newStatus === 'Resolved') {
+                // Open Resolution Modal
+                document.getElementById('resolvedIssueId').value = issueId;
+                document.getElementById('currentResolvedId').textContent = issueId;
+                // FIX: Ensure correct modal stacking by closing relevant ones first
+                closeModal('fullListModal'); 
+                document.getElementById('resolvedModal').style.display = 'block';
+            } else {
+                // Handles 'Set Status' or other changes
+                updateTableRowStatus(issueId, newStatus);
+            }
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+            // NOTE: The action handlers for assignment/resolution now automatically call renderDashboard,
+            // which refreshes the main list and implicitly closes the full list if the element was removed.
+            
+            if (modalId === 'assignmentModal') {
+                document.getElementById('assignmentForm').reset();
+            }
+             if (modalId === 'resolvedModal') {
+                document.getElementById('resolvedForm').reset();
+            }
+        }
+
+        // --- Submission Logic ---
+        document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const issueId = document.getElementById('assignmentIssueId').value;
+            const assignedName = document.getElementById('assignedName').value;
+            const assignedPhone = document.getElementById('assignedPhone').value;
+            const timestamp = new Date().toLocaleString();
+            
+            const complaint = mockComplaints[issueId];
+
+            if (complaint) {
+                complaint.status = 'In Progress';
+                complaint.assignedTo = assignedName;
+                complaint.contactNumber = assignedPhone;
+                complaint.progress = 50; 
+                complaint.assignedDate = new Date().toISOString(); 
+                complaint.progressDetails = `Assigned to ${assignedName} on ${timestamp}. Initial field work scheduled.`;
+
+                updateTableRowStatus(issueId, 'In Progress');
+                
+                const selectElement = document.querySelector(`tr[data-id="${issueId}"] select`);
+                if(selectElement) { selectElement.value = 'In Progress'; }
+
+                alert(`Complaint ${issueId} assigned to ${assignedName} (Status: In Progress)`);
+                closeModal('assignmentModal');
+                
+                const adminDetails = JSON.parse(localStorage.getItem('adminDetails'));
+                renderDashboard(adminDetails);
+
+
+            } else {
+                alert("Error: Complaint ID not found.");
+                closeModal('assignmentModal');
+            }
+        });
+
+        document.getElementById('resolvedForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const issueId = document.getElementById('resolvedIssueId').value;
+            const resolutionDesc = document.getElementById('resolutionDesc').value;
+            const resolutionProof = document.getElementById('resolutionProof').files[0];
+            const timestamp = new Date().toLocaleString();
+            
+            const complaint = mockComplaints[issueId];
+
+            if (complaint) {
+                complaint.status = 'Resolved';
+                complaint.progress = 100;
+                complaint.resolvedDate = new Date().toISOString(); 
+                const proofFileName = resolutionProof ? resolutionProof.name : "N/A";
+                complaint.progressDetails = `RESOLVED on ${timestamp}. Final Description: ${resolutionDesc} (Proof File: ${proofFileName})`;
+
+                updateTableRowStatus(issueId, 'Resolved');
+                
+                const row = document.querySelector(`tr[data-id="${issueId}"]`);
+                const actionCell = row.querySelector('td:nth-child(5)');
+                
+                actionCell.innerHTML = `
+                    <button class="btn btn-primary" onclick="sendFeedbackForm('${issueId}')" id="feedback-btn-${issueId}">Send Feedback Form</button>
+                `;
+
+                alert(`Complaint ${issueId} marked as RESOLVED! Proof submitted. Ready for feedback.`);
+                closeModal('resolvedModal');
+                
+                const adminDetails = JSON.parse(localStorage.getItem('adminDetails'));
+                renderDashboard(adminDetails);
+
+
+            } else {
+                alert("Error: Complaint ID not found.");
+                closeModal('resolvedModal');
+            }
+        });
+        
+        // --- Feedback and Disappearance Logic ---
+        function sendFeedbackForm(issueId) {
+            const row = document.querySelector(`tr[data-id="${issueId}"]`);
+            const button = document.getElementById(`feedback-btn-${issueId}`);
+
+            button.textContent = 'Forwarded';
+            button.classList.add('btn-forwarded-mock'); 
+
+            setTimeout(() => {
+                row.classList.add('row-disappear'); 
+                
+                setTimeout(() => {
+                    row.remove();
+                }, 500); 
+
+                alert(`Feedback form simulated to be sent. Complaint ${issueId} removed from active list.`);
+            }, 2000); 
+        }
+
+        // Function to open modal and render full list
+        window.viewFullList = function(priorityType) {
+            const adminDetails = JSON.parse(localStorage.getItem('adminDetails'));
+            const allComplaints = Object.values(mockComplaints);
+
+            // 1. Filter all complaints based on admin credentials AND priority type
+            const fullList = allComplaints.filter(c => 
+                c.city === adminDetails.city && 
+                c.department === adminDetails.department &&
+                c.priorityLevel === priorityType
+            );
+
+            const modalTitleElement = document.getElementById('fullListModalTitle');
+            const modalBodyElement = document.getElementById('fullListTableBody');
+            const modal = document.getElementById('fullListModal');
+            
+            modalTitleElement.textContent = `Full List: ${priorityType} Priority Complaints (${fullList.length} Total)`;
+
+            // 2. Render the full table body for the modal
+            let tableHtml = fullList.map(complaint => {
+                let actionContent;
+                const priorityClass = complaint.priorityLevel.toLowerCase().replace(' ', '-');
+                
+                // Determine action based on context (Triage vs Actionable)
+                if (priorityType === 'New') {
+                    // New Reports get Set Priority Button
+                     actionContent = `<button class="btn btn-primary btn-sm" onclick="showPriorityModal('${complaint.id}')">Set Priority</button>`;
+                } else if (complaint.status === 'Resolved') {
+                    // Resolved complaints get Feedback Button
+                    actionContent = `<button class="btn btn-primary btn-sm" onclick="sendFeedbackForm('${complaint.id}')" id="modal-feedback-btn-${complaint.id}">Send Feedback Form</button>`;
+                } else {
+                    // In Progress/Pending complaints get Status Dropdown
+                    actionContent = `
+                        <select onchange="updateStatus('${complaint.id}', this.value)" style="padding: 5px; font-size: 0.8em;">
+                            <option value="">Set Status</option>
+                            <option value="In Progress" ${complaint.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Resolved" ${complaint.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                    `;
+                }
+                
+                return `
+                    <tr data-id="${complaint.id}" id="full-row-${complaint.id}">
+                        <td class="text-center">${complaint.id}</td>
+                        <td style="text-align:left">${complaint.title}</td>
+                        <td class="text-center"><span class="priority-${priorityClass}">${complaint.priorityLevel}</span></td>
+                        <td class="text-center status-${complaint.status.toLowerCase().replace(' ', '-')}">${complaint.status}</td>
+                        <td class="text-center">${actionContent}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            modalBodyElement.innerHTML = tableHtml;
+            
+            // 3. Display the modal
+            modal.style.display = 'block';
+        }
+        
+        // Function to render a single section with limitation and "See More" button
+        function renderComplaintSection(listId, complaints, priorityType, isTriageSection) {
+            const totalCount = complaints.length;
+            const listElement = document.getElementById(listId);
+            const limit = 3;
+            
+            // Slice to show only the first 3 complaints
+            const complaintsToShow = complaints.slice(0, limit);
+
+            // Render the rows
+            let html = complaintsToShow.map(complaint => {
+                let actionContent;
+                const priorityClass = complaint.priorityLevel.toLowerCase().replace(' ', '-');
+
+                if (complaint.status === 'Resolved') {
+                    // Show Send Feedback button if already resolved
+                    actionContent = `<button class="btn btn-primary" onclick="sendFeedbackForm('${complaint.id}')" id="feedback-btn-${complaint.id}">Send Feedback Form</button>`;
+                } else if (isTriageSection) {
+                     actionContent = `<button class="btn btn-primary" onclick="showPriorityModal('${complaint.id}')">Set Priority</button>`;
+                } else {
+                    // Actionable sections (High, Medium, Low)
+                    actionContent = `
+                        <select onchange="updateStatus('${complaint.id}', this.value)" style="padding: 5px;">
+                            <option value="">Set Status</option>
+                            <option value="In Progress" ${complaint.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Resolved" ${complaint.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                    `;
+                }
+
+                return `
+                    <tr data-id="${complaint.id}">
+                        <td>${complaint.id}</td>
+                        <td>${complaint.title}</td>
+                        <td><span class="priority-${priorityClass}">${complaint.priorityLevel}</span></td>
+                        <td class="status-${complaint.status.toLowerCase().replace(' ', '-')}">${complaint.status}</td>
+                        <td>${actionContent}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Add "See More" button if count exceeds the limit
+            if (totalCount > limit) {
+                const remaining = totalCount - limit;
+                html += `
+                    <tr class="see-more-row">
+                        <td colspan="5" class="text-center">
+                            <button class="btn btn-primary" onclick="viewFullList('${priorityType}')">
+                                View ${remaining} more ${priorityType} complaints
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            listElement.innerHTML = html;
+        }
+
+        
+        // --- Dynamic Dashboard Renderer ---
+        function renderDashboard(adminDetails) {
+            // 1. Filter complaints by Admin Credentials
+            const filteredComplaints = Object.values(mockComplaints).filter(c => 
+                c.city === adminDetails.city && c.department === adminDetails.department
+            );
+
+            // 2. Separate into the four sections
+            const newReports = filteredComplaints.filter(c => c.priorityLevel === 'New');
+            const highPriority = filteredComplaints.filter(c => c.priorityLevel === 'High');
+            const mediumPriority = filteredComplaints.filter(c => c.priorityLevel === 'Medium');
+            const lowPriority = filteredComplaints.filter(c => c.priorityLevel === 'Low'); // NEW FILTER
+
+            // 3. Render New Reports (Section 1: Triage)
+            renderComplaintSection('new-reports-list', newReports, 'New', true);
+
+            // 4. Render Actionable Lists (Sections 2, 3, & 4)
+            renderComplaintSection('high-priority-list', highPriority, 'High', false);
+            renderComplaintSection('medium-priority-list', mediumPriority, 'Medium', false);
+            renderComplaintSection('low-priority-list', lowPriority, 'Low', false);
+
+
+            // 5. Initialize/Update Map
+            if (mapInstance) {
+                mapInstance.remove();
+            }
+            const cityCoords = cityCoordinates[adminDetails.city];
+            mapInstance = L.map('map').setView([cityCoords.lat, cityCoords.lon], 13); 
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(mapInstance);
+
+            // --- Hotspot calculation (SIMPLIFIED PROXY) ---
+            const hotspotLocations = {};
+            const hotspotThreshold = 3; // Threshold set to 3 complaints
+
+            // Tally complaints by locality and calculate average center
+            filteredComplaints.forEach(c => {
+                // Use a combination of department and a rounded coordinate to simulate distinct sub-areas
+                // Rounding to 2 decimal places (approx. 1km) for better grouping in scattered mock data
+                const subAreaKey = `${c.locality}-${Math.round(c.lat * 100) / 100}-${Math.round(c.lon * 100) / 100}`; 
+                
+                if (!hotspotLocations[subAreaKey]) {
+                    hotspotLocations[subAreaKey] = { name: c.locality, latSum: 0, lonSum: 0, count: 0 }; 
+                }
+                hotspotLocations[subAreaKey].latSum += c.lat;
+                hotspotLocations[subAreaKey].lonSum += c.lon;
+                hotspotLocations[subAreaKey].count++;
+            });
+            
+            // --- Icon Definitions ---
+            const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            const silverIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+
+            // 6. Add markers (Individual arrows)
+            for (const complaint of filteredComplaints) { 
+                let icon;
+                if (complaint.priorityLevel === 'High') { icon = redIcon; } 
+                else if (complaint.priorityLevel === 'Medium') { icon = yellowIcon; } 
+                else if (complaint.priorityLevel === 'New') { icon = silverIcon; } 
+                else if (complaint.priorityLevel === 'Low') { icon = blueIcon; } 
+                else { icon = greenIcon; }
+
+                if (complaint.lat && complaint.lon) {
+                    L.marker([complaint.lat, complaint.lon], { icon: icon })
+                        .addTo(mapInstance)
+                        .bindPopup(`<b>Issue:</b> ${complaint.title}<br><b>Priority:</b> ${complaint.priorityLevel}<br><b>Status:</b> ${complaint.status}<br>Locality: ${complaint.locality}`);
+                }
+            }
+
+            // 7. Render Hotspots (large colored circles for high density areas)
+            for (const key in hotspotLocations) {
+                const data = hotspotLocations[key];
+                if (data.count >= hotspotThreshold) {
+                    const centerLat = data.latSum / data.count;
+                    const centerLon = data.lonSum / data.count;
+                    
+                    const radius = 240; // Fixed radius of 240 meters
+                    let color;
+                    let fillColor;
+
+                    if (data.count > 10) {
+                        color = 'red';
+                        fillColor = '#f03';
+                    } else if (data.count > 3) {
+                        color = 'orange';
+                        fillColor = '#ffa500';
+                    } else {
+                        color = 'yellow';
+                        fillColor = '#ffff00';
+                    }
+
+                    // Draw L.circle to represent the Hotspot area
+                    L.circle([centerLat, centerLon], {
+                        radius: radius, 
+                        color: color,
+                        fillColor: fillColor,
+                        fillOpacity: 0.35, 
+                        weight: 2
+                    }).addTo(mapInstance)
+                      .bindPopup(`<b>HOTSPOT ALERT:</b> ${data.name} (Cluster of ${data.count} complaints)`);
+                }
+            }
+        }
+
+        // --- Core Dashboard Initialization ---
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const adminDetails = JSON.parse(localStorage.getItem('adminDetails'));
+            const dashboardTitle = document.getElementById('dashboard-title');
+            const loader = document.getElementById('loader');
+            
+            if (!adminDetails || !adminDetails.city) {
+                // Not logged in or malformed admin details - go back to login
+                localStorage.removeItem('adminDetails');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            dashboardTitle.textContent = `Welcome, ${adminDetails.department} Head (${adminDetails.locality})`;
+
+            // Render dashboard synchronously (mock data is local) for fastest UX
+            try {
+                renderDashboard(adminDetails);
+            } catch (err) {
+                console.error('Error rendering dashboard:', err);
+            }
+
+            // Hide loader immediately after rendering
+            if (loader) {
+                loader.style.transition = 'opacity 0.25s ease';
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.display = 'none'; }, 300);
+            }
+
+            // Hamburger menu toggle logic
+            const menuToggle = document.getElementById('menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            if (menuToggle && navLinks) {
+                menuToggle.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                });
+            }
+
+            // ================= SOS (admin-only) setup =================
+            (function setupSOSOnDashboard() {
+                try {
+                    const sosBtn = document.getElementById('sosBtn');
+                    const sosModal = document.getElementById('sosModal');
+                    const sosFrame = document.getElementById('sosFrame');
+                    const sosCloseBtn = document.getElementById('sosCloseBtn');
+                    const sosPopoutBtn = document.getElementById('sosPopoutBtn');
+
+                    // Double-check admin details (defense-in-depth)
+                    const adminDetails = JSON.parse(localStorage.getItem('adminDetails') || 'null');
+                    if (!adminDetails) {
+                        // No admin -> hide control
+                        if (sosBtn) sosBtn.style.display = 'none';
+                        return;
+                    }
+
+                    // Show SOS control on dashboard
+                    if (sosBtn) sosBtn.style.display = 'flex';
+
+                    const predefinedContactId = 'RESPONDER_12345';
+                    function createRoomName() {
+                        return `jharkhand-sos-${predefinedContactId}`;
+                    }
+
+                    function buildJitsiURL(roomName, displayName = 'Responder') {
+                        const base = 'https://meet.jit.si/';
+                        const params = new URLSearchParams({
+                            'userInfo.displayName': displayName,
+                            'config.startWithAudioMuted': 'false',
+                            'config.startWithVideoMuted': 'false',
+                            'interfaceConfig.DISABLE_JOIN_LEAVE_NOTIFICATIONS': 'true'
+                        });
+                        return `${base}${encodeURIComponent(roomName)}#${params.toString()}`;
+                    }
+
+                    function openSosModal() {
+                        const room = createRoomName();
+                        const url = buildJitsiURL(room, 'Responder');
+                        sosFrame.src = url;
+                        sosModal.classList.add('active');
+                        sosModal.setAttribute('aria-hidden', 'false');
+                        setTimeout(() => { sosFrame.focus(); }, 500);
+                    }
+
+                    function closeSosModal() {
+                        sosModal.classList.remove('active');
+                        sosModal.setAttribute('aria-hidden', 'true');
+                        sosFrame.src = '';
+                    }
+
+                    function popoutWindow() {
+                        const room = createRoomName();
+                        const url = buildJitsiURL(room, 'Responder');
+                        const win = window.open(url, '_blank', 'noopener,noreferrer,width=1000,height=700');
+                        if (!win) {
+                            alert('Unable to open new window. Please allow pop-ups for this site.');
+                        } else {
+                            closeSosModal();
+                        }
+                    }
+
+                    sosBtn.addEventListener('click', () => {
+                        // final check
+                        const adminCheck = JSON.parse(localStorage.getItem('adminDetails') || 'null');
+                        if (!adminCheck) { alert('Only logged-in admins can start an SOS call.'); return; }
+                        if (!confirm('Start emergency video call to responder? This will attempt to open your camera and microphone.')) return;
+                        openSosModal();
+                    });
+
+                    sosCloseBtn.addEventListener('click', closeSosModal);
+                    sosPopoutBtn.addEventListener('click', popoutWindow);
+
+                    sosModal.addEventListener('click', (ev) => { if (ev.target === sosModal) closeSosModal(); });
+                    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && sosModal.classList.contains('active')) closeSosModal(); });
+                } catch (err) {
+                    console.error('SOS setup error:', err);
+                }
+            })();
+        });
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>

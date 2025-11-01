@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00A6FF">
+    <meta name="msapplication-TileColor" content="#032B4A">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Track Complaint Status</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> 
+    <style>
+        /* Timeline styling from previous updates */
+        .tracking-result {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .timeline {
+            position: relative;
+            margin: 20px 0 20px 20px; /* Added left margin for the line */
+            padding: 0;
+            list-style: none;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 2px;
+            background-color: #e0e0e0;
+        }
+        .timeline-item {
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ccc;
+            border-radius: 50%;
+            border: 2px solid white;
+            left: -5px;
+            top: 5px;
+            z-index: 1;
+        }
+        .timeline-item.completed::before {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        .timeline-date {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 5px;
+        }
+        .timeline-details {
+            margin-top: 10px;
+            padding-left: 10px;
+            border-left: 2px solid #f0f0f0;
+        }
+        
+        /* Mobile adjustment for input stacking */
+        @media (max-width: 600px) {
+            .form-group > div {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+
+        /* --- MOBILE NAVIGATION STYLES (FIXED ALIGNMENT) --- */
+        .menu-toggle {
+            display: none;
+            cursor: pointer;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 21px;
+            margin-left: 10px;
+        }
+
+        .menu-toggle .bar {
+            height: 3px;
+            width: 100%;
+            background-color: white;
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            nav {
+                justify-content: space-between;
+            }
+
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                background-color: var(--bg-dark);
+                position: absolute;
+                top: 60px;
+                left: 0;
+                text-align: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding-bottom: 10px;
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .nav-links a {
+                margin: 0;
+                padding: 15px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading spinner (shows on toggle clicks) -->
+    <div id="temp-loader" class="loader-container loader-hidden">
+        <div class="loader"></div>
+        <div class="loading-text">Loading, please wait...</div>
+    </div>
+    <header>
+        <nav>
+            <div class="logo"><a href="index.html">THE CITIZENS</a></div>
+            <div style="display: flex; align-items: center;">
+                <!-- MOBILE MENU ICON STRUCTURE (FIXED) -->
+                <div class="menu-toggle" id="menu-toggle">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+                <div class="nav-links" id="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="report.html">Report Issue</a>
+                    <a href="track_status.html" class="active">Track Status</a>
+                    <a href="login.html">Admin Login</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="card">
+            <h1>Track Your Complaint</h1>
+            <form id="trackingForm" style="margin-bottom: 30px;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="text" id="complaintIdInput" placeholder="Enter Complaint ID (e.g., MOCK-2025-1004)" required style="flex-grow: 1;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Track</button>
+                </div>
+            </form>
+
+            <div id="trackingResult" class="tracking-result" style="display: none;">
+                <h3 id="issueTitleDisplay"></h3>
+                <p><strong>Complaint ID:</strong> <span id="idDisplay"></span></p>
+                <p><strong>Category:</strong> <span id="categoryDisplay"></span></p>
+                <p><strong>Location:</strong> <span id="locationDisplay"></span></p>
+                <p><strong>Current Status:</strong> <strong id="statusDisplay"></strong></p>
+                
+                <h4 style="margin-top: 20px;">Progress Timeline</h4>
+                
+                <ul class="timeline" id="progressTimeline">
+                    <!-- Timeline items rendered by JS -->
+                </ul>
+
+                <!-- Additional Details -->
+                <div id="additionalDetails" style="margin-top: 20px;">
+                    <h4>Assignment Details</h4>
+                    <p id="progressDetailsDisplay"></p>
+                    <p style="margin-top: 10px;"><strong>Assigned to:</strong> <span id="assignedToDisplay"></span></p>
+                    <p><strong>Contact:</strong> <span id="contactDisplay"></span></p>
+                </div>
+            </div>
+            <p id="trackingMessage" style="text-align: center; color: var(--high-priority); display: none;">Complaint ID not found. Please check the number.</p>
+        </div>
+    </main>
+    <script>
+        // MOCK Complaint Tracking Logic
+        const mockComplaints = {
+            "MOCK-2025-1004": {
+                title: "Water logging near market",
+                category: "Water Management",
+                location: "Ranchi, Main Market",
+                status: "In Progress",
+                progress: 60,
+                progressDetails: "The issue has been assessed and a field team has been assigned to clear the blockage. They are currently on-site.",
+                assignedTo: "City Water Management Department, Team B",
+                contactNumber: "+91 98765 43210",
+                registeredDate: "2025-09-26 12:30 PM",
+                assignedDate: "2025-09-27 10:00 AM",
+                resolvedDate: null
+            },
+            "MOCK-2025-1005": {
+                title: "Broken Streetlight",
+                category: "Street Light",
+                location: "Dhanbad, Sector 4",
+                status: "Resolved",
+                progress: 100,
+                progressDetails: "The light was repaired and is now functional. The issue has been closed.",
+                assignedTo: "Municipal Electric Department",
+                contactNumber: "+91 88888 77777",
+                registeredDate: "2025-09-24 09:00 AM",
+                assignedDate: "2025-09-24 11:30 AM",
+                resolvedDate: "2025-09-25 04:00 PM"
+            },
+            "MOCK-2025-1006": {
+                title: "Illegal Waste Dumping",
+                category: "Waste Mgmt",
+                location: "Jamshedpur Bypass",
+                status: "Pending",
+                progress: 10,
+                progressDetails: "The complaint has been received and is currently under initial review. No team has been assigned yet.",
+                assignedTo: "N/A",
+                contactNumber: "N/A",
+                registeredDate: "2025-09-28 11:00 AM",
+                assignedDate: null,
+                resolvedDate: null
+            }
+        };
+
+        function renderTimeline(complaint) {
+            const timelineElement = document.getElementById('progressTimeline');
+            timelineElement.innerHTML = '';
+
+            const stages = [
+                { title: "Complaint Registered", date: complaint.registeredDate, isCompleted: true },
+                { title: "Team Assigned", date: complaint.assignedDate, isCompleted: complaint.assignedDate !== null },
+                { title: "Issue Resolved", date: complaint.resolvedDate, isCompleted: complaint.status === 'Resolved' }
+            ];
+
+            stages.forEach(stage => {
+                const li = document.createElement('li');
+                li.className = `timeline-item ${stage.isCompleted ? 'completed' : ''}`;
+                
+                let html = `<strong>${stage.title}</strong>`;
+                if (stage.date) {
+                    html += `<div class="timeline-date">${stage.date}</div>`;
+                } else if (stage.isCompleted) {
+                     html += `<div class="timeline-date">Date Not Recorded</div>`;
+                } else {
+                    html += `<div class="timeline-date">Pending Date</div>`;
+                }
+
+                if (stage.title === "Team Assigned" && complaint.assignedTo && complaint.assignedTo !== 'N/A') {
+                    html += `<div class="timeline-details">Assigned to ${complaint.assignedTo}</div>`;
+                } else if (stage.title === "Issue Resolved" && complaint.progressDetails) {
+                    html += `<div class="timeline-details">${complaint.progressDetails.split('. ')[0]}.</div>`;
+                }
+
+                li.innerHTML = html;
+                timelineElement.appendChild(li);
+            });
+        }
+
+
+        document.getElementById('trackingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('complaintIdInput').value.trim();
+            const resultDiv = document.getElementById('trackingResult');
+            const messageP = document.getElementById('trackingMessage');
+            const complaint = mockComplaints[id];
+
+            resultDiv.style.display = 'none';
+            messageP.style.display = 'none';
+
+            if (complaint) {
+                document.getElementById('issueTitleDisplay').textContent = complaint.title;
+                document.getElementById('idDisplay').textContent = id;
+                document.getElementById('categoryDisplay').textContent = complaint.category;
+                document.getElementById('locationDisplay').textContent = complaint.location;
+                document.getElementById('statusDisplay').textContent = complaint.status;
+                document.getElementById('statusDisplay').style.color = complaint.status === 'Resolved' ? 'var(--secondary-color)' : 'var(--primary-color)';
+                
+                document.getElementById('progressDetailsDisplay').textContent = complaint.progressDetails;
+                document.getElementById('assignedToDisplay').textContent = complaint.assignedTo;
+                document.getElementById('contactDisplay').textContent = complaint.contactNumber;
+                
+                renderTimeline(complaint);
+                
+                resultDiv.style.display = 'block';
+            } else {
+                messageP.style.display = 'block';
+            }
+        });
+        
+        // Hamburger menu toggle logic (FIXED)
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            const navLinks = document.querySelector('#nav-links');
+
+            if (menuToggle && navLinks) {
+                menuToggle.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
